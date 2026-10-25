@@ -14,7 +14,7 @@ export default function HomeScreen({ navigation }) {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1) Consumir a API via Axios e armazenar os dados no estado
+  
   useEffect(() => {
     axios
       .get('https://www.themealdb.com/api/json/v1/1/search.php?s=chicken')
@@ -40,13 +40,13 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* 2) Tela Home: FlatList mostrando nome e imagem da receita */}
+      {}
       <FlatList
         data={meals}
         keyExtractor={(item) => item.idMeal}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          // 3) Cada item clicável navegando para Detalhes com parâmetros
+          
           <TouchableOpacity
             style={styles.card}
             activeOpacity={0.8}

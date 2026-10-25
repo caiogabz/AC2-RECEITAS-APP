@@ -154,6 +154,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    maxWidth: 700,
+    width: '100%',
+    alignSelf: 'center',
   },
   searchSection: {
     flexDirection: 'row',

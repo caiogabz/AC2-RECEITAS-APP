@@ -2,6 +2,10 @@
   "name": "meal-recipes-app",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web"
+  },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.12",
     "@react-navigation/native": "^7.5.1",
@@ -15,12 +19,6 @@
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
     "react-native-web": "^0.21.0"
-  },
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
   },
   "private": true
 }

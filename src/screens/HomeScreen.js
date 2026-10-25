@@ -1,274 +1,119 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   FlatList,
-  TextInput,
+  Image,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
-  SafeAreaView,
 } from 'react-native';
-import api from '../services/api';
-import MealCard from '../components/MealCard';
+import axios from 'axios';
 
 export default function HomeScreen({ navigation }) {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const [searchText, setSearchText] = useState('chicken');
 
-  // Função para buscar receitas na API TheMealDB
-  const fetchMeals = useCallback(async (query = 'chicken') => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await api.get(`/search.php?s=${encodeURIComponent(query)}`);
-      
-      // TheMealDB retorna { meals: [...] } ou { meals: null } se não encontrar
-      if (response.data && response.data.meals) {
-        setMeals(response.data.meals);
-      } else {
-        setMeals([]);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar receitas:', err);
-      setError('Não foi possível carregar as receitas. Verifique sua conexão com a internet.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  // 1) Consumir a API via Axios e armazenar os dados no estado
+  useEffect(() => {
+    axios
+      .get('https://www.themealdb.com/api/json/v1/1/search.php?s=chicken')
+      .then((response) => {
+        setMeals(response.data.meals || []);
+      })
+      .catch((error) => {
+        console.error('Erro ao buscar receitas:', error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  // Busca inicial com o termo "chicken" conforme requisito
-  useEffect(() => {
-    fetchMeals('chicken');
-  }, [fetchMeals]);
-
-  // Função para lidar com a busca manual
-  const handleSearch = () => {
-    fetchMeals(searchText.trim());
-  };
-
-  // Função para o pull-to-refresh
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchMeals(searchText.trim() || 'chicken');
-  };
-
-  // Navega para a tela de Detalhes enviando a receita selecionada
-  const handleMealPress = (meal) => {
-    navigation.navigate('Details', { meal });
-  };
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#e65100" />
+        <Text style={styles.loadingText}>Carregando receitas...</Text>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Barra de Pesquisa */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchInputContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar receitas (ex: chicken, cake, beef)..."
-            placeholderTextColor="#94a3b8"
-            value={searchText}
-            onChangeText={setSearchText}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          {searchText.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchText('');
-                fetchMeals('');
-              }}
-              style={styles.clearButton}
-            >
-              <Text style={styles.clearButtonText}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Buscar</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Conteúdo Principal */}
-      {loading && !refreshing ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#ea580c" />
-          <Text style={styles.loadingText}>Carregando receitas deliciosas...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
+    <View style={styles.container}>
+      {/* 2) Tela Home: FlatList mostrando nome e imagem da receita */}
+      <FlatList
+        data={meals}
+        keyExtractor={(item) => item.idMeal}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          // 3) Cada item clicável navegando para Detalhes com parâmetros
           <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchMeals(searchText || 'chicken')}
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Details', { meal: item })}
           >
-            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+            <Image source={{ uri: item.strMealThumb }} style={styles.image} />
+            <View style={styles.cardContent}>
+              <Text style={styles.title}>{item.strMeal}</Text>
+              <Text style={styles.viewMore}>Ver detalhes →</Text>
+            </View>
           </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={meals}
-          keyExtractor={(item) => item.idMeal}
-          renderItem={({ item }) => (
-            <MealCard meal={item} onPress={() => handleMealPress(item)} />
-          )}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#ea580c']}
-            />
-          }
-          ListHeaderComponent={
-            <View style={styles.listHeader}>
-              <Text style={styles.resultCount}>
-                {meals.length} {meals.length === 1 ? 'receita encontrada' : 'receitas encontradas'}
-              </Text>
-            </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🍽️</Text>
-              <Text style={styles.emptyTitle}>Nenhuma receita encontrada</Text>
-              <Text style={styles.emptySubtitle}>
-                Tente pesquisar por outro termo ou ingrediente em inglês (ex: pasta, chicken, fish).
-              </Text>
-            </View>
-          }
-        />
-      )}
-    </SafeAreaView>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    maxWidth: 700,
+    backgroundColor: '#f5f5f5',
+    maxWidth: 650,
     width: '100%',
     alignSelf: 'center',
   },
-  searchSection: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    gap: 10,
-    alignItems: 'center',
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-  },
-  searchInput: {
-    flex: 1,
-    height: 44,
-    fontSize: 15,
-    color: '#0f172a',
-  },
-  clearButton: {
-    padding: 6,
-  },
-  clearButtonText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: 'bold',
-  },
-  searchButton: {
-    backgroundColor: '#ea580c',
-    paddingHorizontal: 16,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  listHeader: {
-    marginBottom: 12,
-  },
-  resultCount: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  centerContainer: {
+  center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    backgroundColor: '#f5f5f5',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#64748b',
-    fontWeight: '500',
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
-  errorIcon: {
-    fontSize: 42,
-    marginBottom: 10,
+  list: {
+    padding: 16,
   },
-  errorText: {
-    fontSize: 15,
-    color: '#ef4444',
-    textAlign: 'center',
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
     marginBottom: 16,
-    lineHeight: 22,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    cursor: 'pointer',
   },
-  retryButton: {
-    backgroundColor: '#ea580c',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+  image: {
+    width: '100%',
+    height: 200,
   },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
+  cardContent: {
+    padding: 14,
   },
-  emptyContainer: {
-    paddingVertical: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyTitle: {
+  title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 6,
   },
-  emptySubtitle: {
+  viewMore: {
     fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    maxWidth: 280,
-    lineHeight: 20,
+    color: '#e65100',
+    fontWeight: '600',
   },
 });
